@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14171d">
+  <title>PhraseLab</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%2314171d%22/%3E%3Crect x=%222%22 y=%229%22 width=%225%22 height=%223%22 fill=%22%234fc3f7%22/%3E%3Crect x=%228%22 y=%224%22 width=%226%22 height=%223%22 fill=%22%23ffb74d%22/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="topbar">
+    <button id="btnMenu" class="icon" title="プロジェクト一覧">☰</button>
+    <div id="projTitle" class="title"></div>
+    <div class="track-box">
+      <select id="trackSelect" title="トラック(案)"></select>
+      <button id="btnTrackMenu" class="icon" title="トラック操作">⋯</button>
+    </div>
+    <button id="btnUndo" class="icon" title="元に戻す (Ctrl+Z)">↶</button>
+    <button id="btnRedo" class="icon" title="やり直す (Ctrl+Y)">↷</button>
+  </header>
+
+  <nav id="tabs">
+    <button data-tab="roll" class="active">ピアノロール</button>
+    <button data-tab="score">楽譜</button>
+    <button data-tab="settings">設定</button>
+    <button data-tab="file">ファイル</button>
+  </nav>
+
+  <main>
+    <!-- ピアノロール -->
+    <section id="view-roll" class="view active">
+      <div class="toolbar" id="rollToolbar">
+        <div class="seg" id="modeSeg">
+          <button data-mode="pen" class="active" title="ペン: タップで音を置く / 長押しで範囲選択">✏️ ペン</button>
+          <button data-mode="select" title="範囲選択: ドラッグで囲む">⬚ 選択</button>
+        </div>
+        <label>グリッド
+          <select id="gridSelect"></select>
+        </label>
+        <label>長さ
+          <select id="lenSelect">
+            <option value="grid">グリッド</option>
+            <option value="120">16分</option>
+            <option value="240">8分</option>
+            <option value="360">付点8分</option>
+            <option value="480">4分</option>
+            <option value="720">付点4分</option>
+            <option value="960">2分</option>
+            <option value="1920">全音</option>
+          </select>
+        </label>
+        <div class="seg">
+          <button id="zoomOut" title="横を縮小">－</button>
+          <button id="zoomFit" title="4小節に合わせる">⇔</button>
+          <button id="zoomIn" title="横を拡大">＋</button>
+          <button id="zoomYOut" title="縦を縮小">↕－</button>
+          <button id="zoomYIn" title="縦を拡大">↕＋</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="scaleGuide"> スケール</label>
+        <label class="chk"><input type="checkbox" id="ghosts"> 他の案</label>
+      </div>
+      <div id="rollWrap">
+        <canvas id="roll"></canvas>
+      </div>
+      <canvas id="wave"></canvas>
+      <div id="editBar" class="toolbar edit">
+        <span id="selInfo" class="muted">音を選ぶと編集できます</span>
+        <div class="seg">
+          <button data-op="up" title="半音上">↑</button>
+          <button data-op="down" title="半音下">↓</button>
+          <button data-op="octUp" title="1オクターブ上">8va</button>
+          <button data-op="octDown" title="1オクターブ下">8vb</button>
+        </div>
+        <div class="seg">
+          <button data-op="left" title="グリッド1つ前へ">←</button>
+          <button data-op="right" title="グリッド1つ後ろへ">→</button>
+          <button data-op="shorter" title="短く">短</button>
+          <button data-op="longer" title="長く">長</button>
+        </div>
+        <select id="exprSelect" title="表情">
+          <option value="">表情…</option>
+          <option value="none">なし</option>
+          <option value="scoop">スクープ ↗</option>
+          <option value="fall">フォール ↘</option>
+          <option value="vibrato">ビブラート 〜</option>
+        </select>
+        <div class="seg">
+          <button data-op="copy" title="コピー (Ctrl+C)">コピー</button>
+          <button data-op="paste" title="再生位置に貼り付け (Ctrl+V)">貼付</button>
+          <button data-op="repeat" title="選択の直後に繰り返す (Ctrl+D)">反復</button>
+          <button data-op="all" title="すべて選択 (Ctrl+A)">全選択</button>
+          <button id="btnLoopSel" title="選択した音の小節をループ">ループ</button>
+          <button data-op="delete" class="danger" title="削除 (Delete)">削除</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 楽譜 -->
+    <section id="view-score" class="view">
+      <div class="toolbar noprint">
+        <div class="seg" id="pitchSeg">
+          <button data-written="0">実音</button>
+          <button data-written="1">記譜</button>
+        </div>
+        <div class="seg" id="sigSeg">
+          <button data-sig="1">調号あり</button>
+          <button data-sig="0">調号なし</button>
+        </div>
+        <button id="btnPrint">印刷 / PDF</button>
+      </div>
+      <div id="scoreArea">
+        <div id="scoreHeader"></div>
+        <div id="score"></div>
+      </div>
+    </section>
+
+    <!-- 設定 -->
+    <section id="view-settings" class="view">
+      <form id="settingsForm" class="form" onsubmit="return false">
+        <fieldset>
+          <legend>曲</legend>
+          <label>曲名 <input id="sName" type="text"></label>
+          <div class="row">
+            <label>テンポ(BPM) <input id="sBpm" type="number" min="20" max="400" step="0.1"></label>
+            <button id="btnTap" type="button" class="tap">タップ</button>
+          </div>
+          <div class="row">
+            <label>拍子
+              <select id="sTime">
+                <option>2/4</option><option>3/4</option><option>4/4</option><option>5/4</option>
+                <option>6/8</option><option>9/8</option><option>12/8</option><option>2/2</option><option>3/8</option><option>7/8</option>
+              </select>
+            </label>
+            <label>調 <select id="sKey"></select></label>
+          </div>
+          <div class="row">
+            <label>小節数 <input id="sMeasures" type="number" min="1" max="999"></label>
+            <label>表示範囲 <input id="sFrom" type="number" min="1"> 〜 <input id="sTo" type="number" min="1"> 小節</label>
+          </div>
+          <p class="hint">6/8・9/8・12/8 は付点4分を1拍としてテンポを数えます。</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>楽器</legend>
+          <label>プリセット <select id="sPreset"></select></label>
+          <div class="row">
+            <label>移調(記譜 − 実音, 半音) <input id="sTranspose" type="number" min="-36" max="36"></label>
+            <label>音部記号 <select id="sClef"></select></label>
+          </div>
+          <div class="row">
+            <label>音域 下(実音) <input id="sLow" type="number" min="0" max="127"> <span id="sLowName" class="muted"></span></label>
+            <label>上(実音) <input id="sHigh" type="number" min="0" max="127"> <span id="sHighName" class="muted"></span></label>
+          </div>
+          <details>
+            <summary>音色(簡易合成)</summary>
+            <div class="row">
+              <label>波形
+                <select id="tWave"><option value="sawtooth">鋸波</option><option value="square">矩形波</option><option value="triangle">三角波</option><option value="sine">正弦波</option></select>
+              </label>
+              <label>タイプ
+                <select id="tType"><option value="wind">管楽器(持続)</option><option value="piano">ピアノ(減衰)</option></select>
+              </label>
+            </div>
+            <label>フォルマント1 <input id="tF1" type="range" min="0" max="2000" step="10"> <span class="val"></span>Hz</label>
+            <label>フォルマント2 <input id="tF2" type="range" min="0" max="5000" step="10"> <span class="val"></span>Hz</label>
+            <label>明るさ <input id="tBright" type="range" min="500" max="10000" step="50"> <span class="val"></span>Hz</label>
+            <label>ビブラート速さ <input id="tVibRate" type="range" min="0" max="10" step="0.1"> <span class="val"></span>Hz</label>
+            <label>ビブラート深さ <input id="tVibDepth" type="range" min="0" max="80" step="1"> <span class="val"></span>cent</label>
+            <button id="btnToneTest" type="button">試聴</button>
+          </details>
+        </fieldset>
+
+        <fieldset>
+          <legend>伴奏音源</legend>
+          <div class="row">
+            <input id="audioFile" type="file" accept="audio/*,.mp3,.wav,.m4a">
+            <button id="btnAudioClear" type="button" class="danger">外す</button>
+          </div>
+          <div id="audioName" class="muted"></div>
+          <div class="row">
+            <label>小節1の位置(秒) <input id="sOffset" type="number" step="0.001"></label>
+            <label>微調整(ms) <input id="sFine" type="number" step="1"></label>
+          </div>
+          <div class="row nudges">
+            <button type="button" data-fine="-50">−50</button>
+            <button type="button" data-fine="-10">−10</button>
+            <button type="button" data-fine="10">+10</button>
+            <button type="button" data-fine="50">+50</button>
+          </div>
+          <div class="row">
+            <button id="btnPlayFromTop" type="button">▶ 伴奏を頭から再生</button>
+            <button id="btnMark1" type="button" class="accent">ここが小節1</button>
+          </div>
+          <p class="hint">伴奏を流し、小節1の頭で「ここが小節1」を押します。メトロノームを鳴らしながら微調整(ms)でずれを詰めてください。</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>コード進行(表示のみ)</legend>
+          <textarea id="sChords" rows="4" placeholder="| A♭m | F♭maj7 | C♭ | G♭ |"></textarea>
+          <p class="hint">「|」で小節を区切ります。1行目の最初が小節1です。ピアノロール上部のコード欄をタップしても入力できます。</p>
+          <button id="btnChordsApply" type="button">コードを反映</button>
+        </fieldset>
+      </form>
+    </section>
+
+    <!-- ファイル -->
+    <section id="view-file" class="view">
+      <div class="form">
+        <fieldset>
+          <legend>読み込み</legend>
+          <label class="file">旋律データ(MIDI / MusicXML) <input id="melodyFile" type="file" accept=".mid,.midi,.musicxml,.xml,audio/midi"></label>
+          <label class="chk"><input type="checkbox" id="importNewTrack" checked> 新しいトラック(案)として追加する</label>
+          <label class="chk"><input type="checkbox" id="importSettings" checked> テンポ・拍子・調もファイルに合わせる</label>
+          <label class="file">プロジェクト(JSON) <input id="projectFile" type="file" accept=".json,application/json"></label>
+        </fieldset>
+        <fieldset>
+          <legend>書き出し</legend>
+          <label>対象トラック <select id="exportTrack"></select></label>
+          <div class="row">
+            <button id="btnExportMidi" type="button">MIDI(実音)</button>
+          </div>
+          <div class="row">
+            <button id="btnExportXml" type="button">MusicXML(記譜)</button>
+            <label class="chk"><input type="checkbox" id="xmlKeySig" checked> 調号あり</label>
+          </div>
+          <div class="row">
+            <button id="btnExportJson" type="button">プロジェクト全体(JSON)</button>
+          </div>
+          <p class="hint">印刷用の楽譜は「楽譜」タブの「印刷 / PDF」から。伴奏音源はJSONに含まれません。</p>
+        </fieldset>
+        <fieldset>
+          <legend>このアプリについて</legend>
+          <p class="hint">データはこの端末のブラウザ内(IndexedDB)にだけ保存されます。ブラウザのデータを消すと失われるので、大事な曲は JSON で書き出しておいてください。</p>
+          <p class="hint">キー操作(PC): Space 再生/停止、Delete 削除、↑↓ 半音、Shift+↑↓ オクターブ、←→ 移動、Ctrl+Z / Ctrl+Y、Ctrl+C / V / D / A</p>
+        </fieldset>
+      </div>
+    </section>
+  </main>
+
+  <footer id="transport">
+    <div class="trow">
+      <button id="btnHome" class="icon" title="表示範囲の先頭へ">⏮</button>
+      <button id="btnPlay" class="icon play" title="再生/停止 (Space)">▶</button>
+      <div id="posDisplay" class="pos">1:1</div>
+      <label class="chk" title="ループ"><input type="checkbox" id="loopOn"> ループ</label>
+      <input id="loopFrom" type="number" min="1" class="num" title="ループ開始小節">
+      <span>〜</span>
+      <input id="loopTo" type="number" min="1" class="num" title="ループ終了小節">
+    </div>
+    <div class="trow">
+      <label title="再生速度(ピッチはそのまま)">速度
+        <select id="rateSelect">
+          <option value="0.5">0.5×</option><option value="0.6">0.6×</option><option value="0.7">0.7×</option>
+          <option value="0.75">0.75×</option><option value="0.8">0.8×</option><option value="0.9">0.9×</option>
+          <option value="1">1.0×</option>
+        </select>
+      </label>
+      <label class="vol">伴奏 <input id="accVol" type="range" min="0" max="1" step="0.01"></label>
+      <label class="vol">旋律 <input id="melVol" type="range" min="0" max="1" step="0.01"></label>
+      <label class="chk" title="メトロノーム"><input type="checkbox" id="metronome"> クリック</label>
+    </div>
+  </footer>
+
+  <!-- プロジェクト一覧 -->
+  <div id="drawer" class="drawer hidden">
+    <div class="drawer-panel">
+      <h2>プロジェクト</h2>
+      <div class="row">
+        <button id="btnNewProject" class="accent">＋ 新規</button>
+        <button id="btnDupProject">複製</button>
+        <button id="btnSampleProject">サンプルを追加</button>
+      </div>
+      <ul id="projectList"></ul>
+      <button id="btnDeleteProject" class="danger">このプロジェクトを削除</button>
+    </div>
+    <div class="drawer-bg"></div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/vendor/vexflow-bravura.js"></script>
+  <script src="js/theory.js"></script>
+  <script src="js/instruments.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/synth.js"></script>
+  <script src="js/transport.js"></script>
+  <script src="js/notation.js"></script>
+  <script src="js/score.js"></script>
+  <script src="js/midi.js"></script>
+  <script src="js/musicxml.js"></script>
+  <script src="js/pianoroll.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
